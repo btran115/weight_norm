@@ -64,26 +64,44 @@ with graph.as_default():
 	train_dataset = train_dataset + g_noise
 
 	cur_layer = train_dataset
-	g1 = tf.Variable(tf.truncated_normal([1, 1, in_chan, 96]))
-	v1 = tf.Variable(tf.truncated_normal([3, 3, in_chan, 96]))
+	#g1 = tf.Variable(tf.truncated_normal([1, 1, in_chan, 96]))
+	v1 = tf.Variable(tf.truncated_normal([3, 3, in_chan, 96], stddev = 0.05))
 	b1 = tf.Variable(tf.truncated_normal([96]))
-	cur_layer = conv(cur_layer, tf.multiply(g1,v1/tf.norm(v1, axis = (0,1))))
+	cur_layer = conv(cur_layer, v1)
 	cur_layer = lrelu(cur_layer + b1)
+
+	#g2 = tf.Variable(tf.truncated_normal([1, 1, 96, 96], stddev = 0.05))
+	v2 = tf.Variable(tf.truncated_normal([3, 3, 96, 96], stddev = 0.05))
+	b2 = tf.Variable(tf.truncated_normal([96]))
+	cur_layer = conv(cur_layer, v2)
+	cur_layer = lrelu(cur_layer + b2)
+
+	#g3 = tf.Variable(tf.truncated_normal([1, 1, 96, 96], stddev = 0.05))
+	v3 = tf.Variable(tf.truncated_normal([3, 3, 96, 96], stddev = 0.05))
+	b3 = tf.Variable(tf.truncated_normal([96]))
+	cur_layer = conv(cur_layer, v3)
+	cur_layer = lrelu(cur_layer + b3)
+
+	#g4 = tf.Variable(tf.truncated_normal([1, 1, 96, 192]))
+	v4 = tf.Variable(tf.truncated_normal([3, 3, 96, 192], stddev = 0.05))
+	b4 = tf.Variable(tf.truncated_normal([192]))
+	cur_layer = conv(cur_layer, v4)
+	cur_layer = lrelu(cur_layer + b4)
 
 	cur_layer = tf.nn.avg_pool(cur_layer, 
 							   [1, cur_layer.shape[1], cur_layer.shape[2], 1],
 							   [1,1,1,1],
 							   'VALID')
-	cur_layer = tf.reshape(cur_layer, [-1, 96])
+	cur_layer = tf.reshape(cur_layer, [-1, 192])
 	g10 = tf.Variable(tf.truncated_normal([1,10]))
-	v10 = tf.Variable(tf.truncated_normal([96,10]))
+	v10 = tf.Variable(tf.truncated_normal([192,10]))
 	b10 = tf.Variable(tf.truncated_normal([10]))
 	logits = tf.matmul(cur_layer, tf.multiply(g10, v10/tf.norm(v10, axis = 0))) + b10
 	
 	#loss and optimizer
 	loss = tf.reduce_mean(
 		tf.nn.softmax_cross_entropy_with_logits(labels = train_labels, logits = logits))
-	optimizer = tf.train.GradientDescentOptimizer(0.8).minimize(loss)
+	optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
 
 	#predictions for valid and test sets, do later
 
