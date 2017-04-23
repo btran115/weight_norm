@@ -7,7 +7,7 @@ import scipy
 
 from tensorflow.examples.tutorials.mnist import input_data
 
-#full model
+#one convolutional layer followed by output
 
 train_size = 55000
 test_size = 10000
@@ -63,66 +63,57 @@ with graph.as_default():
 	g_noise = tf.truncated_normal(train_dataset.shape, stddev = 0.15)
 	cur_layer = train_dataset + g_noise
 
-	#first set of 3 3x3conv leaky relu, a 2x2 max pool w/ stride 2, dropout w/ p=0.5
-	#TODO: figure out how to intialize
-	g1 = tf.Variable(tf.truncated_normal([1, 1, 1, 96], stddev = 0.05))
+	#g1 = tf.Variable(tf.truncated_normal([1, 1, in_chan, 96]))
 	v1 = tf.Variable(tf.truncated_normal([3, 3, in_chan, 96], stddev = 0.05))
 	b1 = tf.Variable(tf.truncated_normal([96]))
-	norm_v1 = v1/tf.norm(v1,axis=(0,1),keep_dims = True)
-	cur_layer = conv(cur_layer, norm_v1)
+	cur_layer = conv(cur_layer, v1)
 	cur_layer = lrelu(cur_layer + b1)
 
-	g2 = tf.Variable(tf.truncated_normal([1, 1, 1, 96], stddev = 0.05))
+	#g2 = tf.Variable(tf.truncated_normal([1, 1, 96, 96], stddev = 0.05))
 	v2 = tf.Variable(tf.truncated_normal([3, 3, 96, 96], stddev = 0.05))
 	b2 = tf.Variable(tf.truncated_normal([96]))
-	norm_v2 = v2/tf.norm(v1,axis=(0,1),keep_dims = True)
-	cur_layer = conv(cur_layer, norm_v2)
+	cur_layer = conv(cur_layer, v2)
 	cur_layer = lrelu(cur_layer + b2)
 
-	g3 = tf.Variable(tf.truncated_normal([1, 1, 1, 96], stddev = 0.05))
+	#g3 = tf.Variable(tf.truncated_normal([1, 1, 96, 96], stddev = 0.05))
 	v3 = tf.Variable(tf.truncated_normal([3, 3, 96, 96], stddev = 0.05))
 	b3 = tf.Variable(tf.truncated_normal([96]))
-	norm_v3 = v3/tf.norm(v3,axis=(0,1),keep_dims = True)
-	cur_layer = conv(cur_layer, norm_v3)
+	cur_layer = conv(cur_layer, v3)
 	cur_layer = lrelu(cur_layer + b3)
+	cur_layer = tf.nn.dropout(maxpool(cur_layer), keep_prob = 0.5)
 
-	g4 = tf.Variable(tf.truncated_normal([1, 1, 1, 192], stddev = 0.05))
+	#g4 = tf.Variable(tf.truncated_normal([1, 1, 96, 192]))
 	v4 = tf.Variable(tf.truncated_normal([3, 3, 96, 192], stddev = 0.05))
 	b4 = tf.Variable(tf.truncated_normal([192]))
-	norm_v4 = v4/tf.norm(v4, axis = (0,1), keep_dims = True)
-	cur_layer = conv(cur_layer, tf.multiply(g4,norm_v4))
+	cur_layer = conv(cur_layer, v4)
 	cur_layer = lrelu(cur_layer + b4)
 
-	g5 = tf.Variable(tf.truncated_normal([1, 1, 1, 192], stddev = 0.05))
+	#g5 = tf.Variable(tf.truncated_normal([1, 1, 192, 192]))
 	v5 = tf.Variable(tf.truncated_normal([3, 3, 192, 192], stddev = 0.05))
 	b5 = tf.Variable(tf.truncated_normal([192]))
-	norm_v5 = v5/tf.norm(v5, axis = (0,1), keep_dims = True)
-	cur_layer = conv(cur_layer, tf.multiply(g5,norm_v5))
+	cur_layer = conv(cur_layer, v5)
 	cur_layer = lrelu(cur_layer + b5)
 
-	g6 = tf.Variable(tf.truncated_normal([1, 1, 1, 192], stddev = 0.05))
+	#g6 = tf.Variable(tf.truncated_normal([1, 1, 192, 192]))
 	v6 = tf.Variable(tf.truncated_normal([3, 3, 192, 192], stddev = 0.05))
 	b6 = tf.Variable(tf.truncated_normal([192]))
-	norm_v6 = v6/tf.norm(v6, axis = (0,1), keep_dims = True)
-	cur_layer = conv(cur_layer, tf.multiply(g6,norm_v6))
+	cur_layer = conv(cur_layer, v6)
 	cur_layer = lrelu(cur_layer + b6)
-	#cur_layer = tf.nn.dropout(maxpool(cur_layer), keep_prob = 0.5)
 
 	cur_layer = tf.nn.avg_pool(cur_layer, 
 							   [1, cur_layer.shape[1], cur_layer.shape[2], 1],
 							   [1,1,1,1],
 							   'VALID')
 	cur_layer = tf.reshape(cur_layer, [-1, 192])
-	g10 = tf.Variable(tf.truncated_normal([1,10], stddev = 0.05))
+	#g10 = tf.Variable(tf.truncated_normal([1,10]))
 	v10 = tf.Variable(tf.truncated_normal([192,10], stddev = 0.05))
 	b10 = tf.Variable(tf.truncated_normal([10]))
-	norm_v10 = v10/tf.norm(v10,axis=0,keep_dims=True)
-	logits = tf.matmul(cur_layer, norm_v10) + b10
+	logits = tf.matmul(cur_layer, v10) + b10
 	
 	#loss and optimizer
 	loss = tf.reduce_mean(
 		tf.nn.softmax_cross_entropy_with_logits(labels = train_labels, logits = logits))
-	optimizer = tf.train.GradientDescentOptimizer(0.003).minimize(loss)
+	optimizer = tf.train.GradientDescentOptimizer(0.007).minimize(loss)
 
 	#predictions for valid and test sets, do later
 
