@@ -84,7 +84,7 @@ with graph.as_default():
 	cur_layer = conv(cur_layer, tf.multiply(g3,v3/tf.norm(v3, axis = (0,1))))
 	cur_layer = lrelu(cur_layer + b3)
 	cur_layer = tf.nn.dropout(maxpool(cur_layer), keep_prob = 0.5)
- 	''' don't have the power to run this yet
+	''' don't have the power to run this yet
 	#second set of the same
 	g4 = tf.Variable(tf.truncated_normal([1, 1, 96, 192]))
 	v4 = tf.Variable(tf.truncated_normal([3, 3, 96, 192]))
