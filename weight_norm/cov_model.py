@@ -4,6 +4,7 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np 
 import scipy
+import cPickle as pickle
 
 from tensorflow.examples.tutorials.mnist import input_data
 
@@ -54,13 +55,13 @@ def maxpool(x):
 graph = tf.Graph()
 with graph.as_default():
 	train_dataset = tf.placeholder(tf.float32, 
-								   shape = (batch_size, im_size,im_size, in_chan))
-	train_labels = tf.placeholder(tf.float32, shape = (batch_size, num_labels))
+								   shape = (None, im_size,im_size, in_chan))
+	train_labels = tf.placeholder(tf.float32, shape = (None, num_labels))
 	valid_dataset = tf.constant(valid_unflat)
 	test_dataset = tf.constant(test_unflat)
 
 	#add Gaussian noise
-	g_noise = tf.truncated_normal(train_dataset.shape, stddev = 0.15)
+	g_noise = tf.truncated_normal((1, im_size,im_size, in_chan), stddev = 0.15)
 	cur_layer = train_dataset + g_noise
 
 	#g1 = tf.Variable(tf.truncated_normal([1, 1, in_chan, 96]))
@@ -111,13 +112,16 @@ with graph.as_default():
 	logits = tf.matmul(cur_layer, v10) + b10
 	
 	#loss and optimizer
-	loss = tf.reduce_mean(
-		tf.nn.softmax_cross_entropy_with_logits(labels = train_labels, logits = logits))
+	loss_all = tf.nn.softmax_cross_entropy_with_logits(labels = train_labels, logits = logits)
+	loss = tf.reduce_mean(loss_all)
 	optimizer = tf.train.GradientDescentOptimizer(0.007).minimize(loss)
+
+	gradients = tf.gradients(loss_all, v1)
 
 	#predictions for valid and test sets, do later
 
 num_steps = 5001
+all_grads = {}
 with tf.Session(graph=graph) as session:
   tf.global_variables_initializer().run()
   print("Initialized")
@@ -134,8 +138,19 @@ with tf.Session(graph=graph) as session:
     # and the value is the numpy array to feed to it.
     feed_dict = {train_dataset : batch_data, train_labels : batch_labels}
     _, l = session.run(
-      [optimizer, loss], feed_dict=feed_dict)
-    if (step % 500 == 0):
+      		 [optimizer, loss], feed_dict=feed_dict)
+    if step % 100 == 1:
+    	cur_grads = []
+    	for i in range(batch_size):
+	    	grad = session.run([gradients], feed_dict = {
+	    		train_dataset : batch_data[i:i+1], 
+	    		train_labels : batch_labels[i:i+1]})
+	    	cur_grads.append(np.copy(grad[0]))
+		all_grads[step] = np.array(cur_grads)
+		with open('gradients.pickle', 'w') as f:
+			pickle.dump(all_grads, f)
+    	
+    if step % 500 == 0:
       print("Minibatch loss at step %d: %f" % (step, l))
       #print("Minibatch accuracy: %.1f%%" % accuracy(predictions, batch_labels))
       #print("Validation accuracy: %.1f%%" % accuracy(
