@@ -61,9 +61,8 @@ with graph.as_default():
 
 	#add Gaussian noise
 	g_noise = tf.truncated_normal(train_dataset.shape, stddev = 0.15)
-	train_dataset = train_dataset + g_noise
+	cur_layer = train_dataset + g_noise
 
-	cur_layer = train_dataset
 	#g1 = tf.Variable(tf.truncated_normal([1, 1, in_chan, 96]))
 	v1 = tf.Variable(tf.truncated_normal([3, 3, in_chan, 96], stddev = 0.05))
 	b1 = tf.Variable(tf.truncated_normal([96]))
@@ -81,6 +80,7 @@ with graph.as_default():
 	b3 = tf.Variable(tf.truncated_normal([96]))
 	cur_layer = conv(cur_layer, v3)
 	cur_layer = lrelu(cur_layer + b3)
+	cur_layer = tf.nn.dropout(maxpool(cur_layer), keep_prob = 0.5)
 
 	#g4 = tf.Variable(tf.truncated_normal([1, 1, 96, 192]))
 	v4 = tf.Variable(tf.truncated_normal([3, 3, 96, 192], stddev = 0.05))
@@ -88,24 +88,36 @@ with graph.as_default():
 	cur_layer = conv(cur_layer, v4)
 	cur_layer = lrelu(cur_layer + b4)
 
+	#g5 = tf.Variable(tf.truncated_normal([1, 1, 192, 192]))
+	v5 = tf.Variable(tf.truncated_normal([3, 3, 192, 192], stddev = 0.05))
+	b5 = tf.Variable(tf.truncated_normal([192]))
+	cur_layer = conv(cur_layer, v5)
+	cur_layer = lrelu(cur_layer + b5)
+
+	#g6 = tf.Variable(tf.truncated_normal([1, 1, 192, 192]))
+	v6 = tf.Variable(tf.truncated_normal([3, 3, 192, 192], stddev = 0.05))
+	b6 = tf.Variable(tf.truncated_normal([192]))
+	cur_layer = conv(cur_layer, v6)
+	cur_layer = lrelu(cur_layer + b6)
+
 	cur_layer = tf.nn.avg_pool(cur_layer, 
 							   [1, cur_layer.shape[1], cur_layer.shape[2], 1],
 							   [1,1,1,1],
 							   'VALID')
 	cur_layer = tf.reshape(cur_layer, [-1, 192])
-	g10 = tf.Variable(tf.truncated_normal([1,10]))
-	v10 = tf.Variable(tf.truncated_normal([192,10]))
+	#g10 = tf.Variable(tf.truncated_normal([1,10]))
+	v10 = tf.Variable(tf.truncated_normal([192,10], stddev = 0.05))
 	b10 = tf.Variable(tf.truncated_normal([10]))
-	logits = tf.matmul(cur_layer, tf.multiply(g10, v10/tf.norm(v10, axis = 0))) + b10
+	logits = tf.matmul(cur_layer, v10) + b10
 	
 	#loss and optimizer
 	loss = tf.reduce_mean(
 		tf.nn.softmax_cross_entropy_with_logits(labels = train_labels, logits = logits))
-	optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
+	optimizer = tf.train.GradientDescentOptimizer(0.007).minimize(loss)
 
 	#predictions for valid and test sets, do later
 
-num_steps = 30000
+num_steps = 3000
 with tf.Session(graph=graph) as session:
   tf.global_variables_initializer().run()
   print("Initialized")
