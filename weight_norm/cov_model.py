@@ -117,7 +117,7 @@ with graph.as_default():
 
 	#predictions for valid and test sets, do later
 
-num_steps = 3000
+num_steps = 5001
 with tf.Session(graph=graph) as session:
   tf.global_variables_initializer().run()
   print("Initialized")
